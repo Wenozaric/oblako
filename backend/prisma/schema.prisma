@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User{
+  email String @unique
+  password String
+  username String
+  createdAt DateTime @default(now())
+  id Int @id @default(autoincrement())
+  bannerTheme String @default("purple")
+  avatarUrl String?
+
+  posts Post[] @relation("UserPosts")
+  comment Comment[]
+  likes Like[]
+
+  //чат с e2e шифрованием ключ
+
+  publicKey String?
+
+  followers Follow[] @relation("Following")
+  following Follow[] @relation("Follower")
+
+  chatRooms ChatRoom[] @relation("UserChats")
+
+  messages Message[] @relation("UserMessages")
+}
+
+model Post{
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  authorId  Int
+  name String
+  desciption String?
+
+  author User @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  likes Like[]
+}
+
+model Like{
+  id Int @id @default(autoincrement())
+  userId Int
+  postId Int
+  
+  type String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id Int @id @default(autoincrement())
+  content String
+  createdAt DateTime @default(now())
+  userId Int
+  postId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id Int @id @default(autoincrement())
+  followerId Int
+  followingId Int
+  createdAt DateTime @default(now())
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model Message {
+  id String @id @default(uuid())
+  text String @db.Text
+  iv String
+  createdAt  DateTime @default(now())
+
+  chatRoomId String
+  chatRoom ChatRoom @relation("RoomMessages", fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  senderId   Int
+  sender User @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom{
+  id String @id @default(uuid()) 
+  createdAt DateTime @default(now())
+  
+  users User[] @relation("UserChats")
+
+  messages Message[] @relation("RoomMessages")
+}

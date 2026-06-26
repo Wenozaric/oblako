@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. База данных (Инициализируется строго под твои данные)
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: cloud_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_DB=hacaton
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # 2. Бэкенд
+  backend:
+    build: ./backend
+    container_name: cloud_backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    # Жестко прописываем правильный ДОКЕРНЫЙ URL для Призмы
+    environment:
+      - DATABASE_URL=postgresql://postgres:admin123@postgres-db:5432/hacaton?schema=public
+    depends_on:
+      - postgres-db
+    restart: always
+
+  # 3. Фронтенд
+  frontend:
+    build: ./frontend
+    container_name: cloud_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
